@@ -1,7 +1,7 @@
 
 const videoGrid = document.getElementById('video-grid');
 const myVideo = document.createElement('video');
-const socket = io('/')
+const socket = io('/');
 myVideo.muted = true;
 console.log('socket', socket);
 // Declare variable to set video stream value on promise res
