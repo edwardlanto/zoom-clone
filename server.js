@@ -1,36 +1,40 @@
-const express = require('express');
-const app = express();
-const server = require('http').Server(app);
-const { v4: uuidv4 } = require('uuid');
-const { ExpressPeerServer, PeerServer } = require('peer');
+const express = require('express')
+const app = express()
+const server = require('http').Server(app)
+const io = require('socket.io')(server)
+const { ExpressPeerServer } = require('peer');
 const peerServer = ExpressPeerServer(server, {
-    debug:true
+  debug: true
 });
-const io = require('socket.io')(server);
+const { v4: uuidV4 } = require('uuid')
 
-// renders ejs file.
-app.set('view engine', 'ejs');
-app.use('/peerjs', peerServer)
+app.use('/peerjs', peerServer);
 
-// Tell server to grab where the javascript files are going to live
+app.set('view engine', 'ejs')
 app.use(express.static('public'))
 
 app.get('/', (req, res) => {
-   res.redirect(`/${uuidv4()}`);  
-});
-
-app.get('/:room', (req, res) => {
-    res.render('room', { roomId: req.params.room})
-});
-
-io.on('connection', socket => {
-    socket.on('join-room', (roomId) => {
-        console.log('room id', roomId);
-        socket.join(roomId);
-
-        // Broadcasts to other user instances that a user has joined.
-        socket.to(roomId).broadcoast.emit('user-connected', userId);
-    })
+  res.redirect(`/${uuidV4()}`)
 })
 
-server.listen(5000);
+app.get('/:room', (req, res) => {
+  res.render('room', { roomId: req.params.room })
+})
+
+io.on('connection', socket => {
+  socket.on('join-room', (roomId, userId) => {
+    socket.join(roomId)
+    socket.to(roomId).broadcast.emit('user-connected', userId);
+    // messages
+    socket.on('message', (message) => {
+      //send message to the same room
+      io.to(roomId).emit('createMessage', message)
+  }); 
+
+    socket.on('disconnect', () => {
+      socket.to(roomId).broadcast.emit('user-disconnected', userId)
+    })
+  })
+})
+
+server.listen(process.env.PORT||5000)
